@@ -1,7 +1,7 @@
 import os
 import time
 import random
-
+import sys
 
 def create_pc(name):
 
@@ -13,21 +13,143 @@ def create_pc(name):
         "LCK": 1,
         "Max HP": 10,
         "HP": 10,
-        "Weapon": None
+        "LVL": 1,
+        "Kills": 0
         }
 
     return character
 
-def create_baddie():
+
+def assign_points(player, points):
+
+    stats = ["ATK", "DEF", "AGL", "LCK"]
+
+    while points > 0:
+        print "You have %s points remaining" % points
+        print "Assign points by typing in the stat you want to boost.\n"
+        print "ATK: %s" % player["ATK"]
+        print "DEF: %s" % player["DEF"]
+        print "AGL: %s" % player["AGL"]
+        print "LCK: %s \n" % player["LCK"]
+        selection = raw_input("$")
+
+        if selection in stats:
+            player[selection] += 1
+            points -= 1
+
+        else: print "\nTry Again.\n"
+
+    return player
+
+
+def create_baddie(level):
 
     baddie = {
-        "Name": "Goblin",
-        "ATK": random.randint(0,3),
-        "DEF": random.randint(0,3),
-        "AGL": random.randint(0,3),
-        "LCK": random.randint(0,3),
+        "Name": "LVL. %s Goblin" % level,
+        "ATK": random.randint(0,2 + level),
+        "DEF": random.randint(0,2 + level),
+        "AGL": random.randint(0,2 + level),
+        "LCK": random.randint(0,2 + level),
         "HP": 5
         }
+    
+    return baddie
+
+
+def print_stats(char):
+
+    for stat, value in char.iteritems():
+        print "%s: %s" % (stat, value)
+
+    return None
+
+
+def attack(attacker, defender):
+
+    attack_roll = random.randint(0, attacker["LCK"]) + attacker["ATK"]
+    defend_roll = random.randint(0, defender["LCK"]) + defender["DEF"]
+    
+    damage = attack_roll - defend_roll
+
+    if damage < 0: damage = 0
+
+    print "%s hit %s for %s damage!" % (attacker["Name"], defender["Name"], damage)
+    
+    return damage
+
+
+def battle(player, baddy):
+
+    agl_check = baddy["AGL"] > player["AGL"]
+
+    if agl_check:
+        print "Oh no! the enemy strikes first!"
+
+    while True:
+    
+        if agl_check:
+            print_stats(baddy)
+            print "\nIt's this guy's turn.\n"
+            raw_input("Enter to continue.")
+            
+            damage = attack(baddy, player)
+
+            player["HP"] -= damage
+            
+            if player["HP"] <= 0: break
+            
+            print
+
+            print_stats(player)
+            print "\nIt's your turn.\n"
+            raw_input("Enter to continue.")
+
+            damage = attack(player, baddy)
+
+            baddy["HP"] -= damage
+
+            if baddy["HP"] <= 0: break
+            
+            print
+
+        else:
+            print_stats(player)
+            print "\nIt's your turn.\n"
+            raw_input("Enter to continue.")
+            
+            damage = attack(player, baddy)
+
+            baddy["HP"] -= damage
+            
+            if baddy["HP"] <= 0: break
+            
+            print
+
+            print_stats(baddy)
+            print "\nIt's this guys turn.\n"
+            raw_input("Enter to continue.")
+
+            damage = attack(baddy, player)
+
+            player["HP"] -= damage
+
+            if player["HP"] <= 0: break
+            
+            print
+
+    if player["HP"] <= 0: sys.exit("You died.")
+
+    else:
+        player["Kills"] += 1
+        player["HP"] = player["Max HP"]
+
+        if player["Kills"] == player["LVL"]:
+            print "You leveled up!"
+            assign_points(player, player["LVL"])
+            player["LVL"] += 1
+            player["Kills"] = 0
+
+        return player
 
 def main():
 
@@ -35,6 +157,8 @@ def main():
     
     name = raw_input("What's your name? ")
     pl_char = create_pc(name)
+
+    pl_char = assign_points(pl_char, 8)
 
     print "*BOOM*"
 
@@ -56,8 +180,11 @@ def main():
     print "Welp, no weapons. Looks like our feline god named 'Lin' has forsaken you."
     print "Now go fight."
 
+    while True:
 
-    
+        enemy = create_baddie(random.randint(1, pl_char["LVL"] + 1))
+        pl_char = battle(pl_char, enemy)
+
     return None
 
 if __name__ == "__main__":
