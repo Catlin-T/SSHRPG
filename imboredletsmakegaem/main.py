@@ -3,8 +3,67 @@ import time
 import random
 import sys
 
-def create_pc(name):
 
+class Player(object):
+    """Should be able to use this class for both
+    enemies *and* the human player.
+
+    """
+
+    def __init__(self, name, attack, defense, agility,
+                 luck, hitpoints, level=0, kills=0):
+
+        """
+
+        Args:
+            name (str): --
+
+        """
+
+        self.name = name
+        self.attack = attack
+        self.defense = defense
+        self.agility = agility
+        self.luck = luck
+        self.hitpoints = hitpoints
+        self.level = level
+        self.kills = 0
+
+        self.max_hitpoints = hitpoints
+
+    def assign_points(self, points):
+        """Namely for HumanPlayer to distribute
+        their stats into the hero.
+
+        Args:
+            points (int): Number of points to invest
+                in stats.
+
+        """
+
+        stats = ["ATK", "DEF", "AGL", "LCK"]
+
+        while points > 0:
+            print "You have %s points remaining" % points
+            print "Assign points by typing in the stat you want to boost.\n"
+            print "ATK: %s" % self.attack
+            print "DEF: %s" % self.defense
+            print "AGL: %s" % self.agility
+            print "LCK: %s \n" % self.luck
+            selection = raw_input("$")
+
+            if selection in stats:
+                # Increase the selected stat by one
+                setattr(self, selection, getattr(self, selection) + 1)
+                points -= 1
+
+            else:
+                print "\nTry Again.\n"
+
+
+
+# deprecated due to Player obj
+def create_pc(name):
     character = {
         "Name": name,
         "ATK": 1,
@@ -18,28 +77,6 @@ def create_pc(name):
         }
 
     return character
-
-
-def assign_points(player, points):
-
-    stats = ["ATK", "DEF", "AGL", "LCK"]
-
-    while points > 0:
-        print "You have %s points remaining" % points
-        print "Assign points by typing in the stat you want to boost.\n"
-        print "ATK: %s" % player["ATK"]
-        print "DEF: %s" % player["DEF"]
-        print "AGL: %s" % player["AGL"]
-        print "LCK: %s \n" % player["LCK"]
-        selection = raw_input("$")
-
-        if selection in stats:
-            player[selection] += 1
-            points -= 1
-
-        else: print "\nTry Again.\n"
-
-    return player
 
 
 def create_baddie(level):
@@ -150,6 +187,7 @@ def battle(player, baddy):
             player["Kills"] = 0
 
         return player
+
 
 def main():
 
