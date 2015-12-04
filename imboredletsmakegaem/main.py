@@ -1,17 +1,17 @@
 import os
 import time
-import random
 import sys
+from random import *
 
 
-class Player(object):
+class Character(object):
     """Should be able to use this class for both
     enemies *and* the human player.
 
     """
 
-    def __init__(self, name, attack, defense, agility,
-                 luck, hitpoints, level=0, kills=0):
+    def __init__(self, name, attack=1, defense=1, agility=1,
+                 luck=1, hitpoints=10, level=0, kills=0, assign=0):
 
         """
 
@@ -27,9 +27,11 @@ class Player(object):
         self.luck = luck
         self.hitpoints = hitpoints
         self.level = level
-        self.kills = 0
+        self.kills = kills
 
         self.max_hitpoints = hitpoints
+        
+        if assign > 0: self.assign_points(assign)
 
     def assign_points(self, points):
         """Namely for HumanPlayer to distribute
@@ -41,152 +43,162 @@ class Player(object):
 
         """
 
-        stats = ["ATK", "DEF", "AGL", "LCK"]
+        stats = {
+            "ATK": "attack",
+            "DEF": "defense",
+            "AGL": "agility",
+            "LCK": "luck"
+            }
 
         while points > 0:
-            print "You have %s points remaining" % points
+            print "\nYou have %s points remaining" % points
             print "Assign points by typing in the stat you want to boost.\n"
             print "ATK: %s" % self.attack
             print "DEF: %s" % self.defense
             print "AGL: %s" % self.agility
             print "LCK: %s \n" % self.luck
-            selection = raw_input("$")
-
+            selection = raw_input("$").upper()
+            
             if selection in stats:
                 # Increase the selected stat by one
-                setattr(self, selection, getattr(self, selection) + 1)
+                setattr(self, stats[selection], 
+                        getattr(self, stats[selection]) + 1)
                 points -= 1
 
             else:
                 print "\nTry Again.\n"
 
 
+    def level_up(self):
+        """Checks if player can level up.
+        
+        """
 
-# deprecated due to Player obj
-def create_pc(name):
-    character = {
-        "Name": name,
-        "ATK": 1,
-        "DEF": 1,
-        "AGL": 1,
-        "LCK": 1,
-        "Max HP": 10,
-        "HP": 10,
-        "LVL": 1,
-        "Kills": 0
-        }
+        if self.kills >= self.level:
+            self.assign_points(self.level)
+            self.kills = 0
+            self.level += 1
 
-    return character
+        else:
+            return None
 
+
+    def print_stats(self):
+        """Print the current stats of the player 
+        to the console.
+
+        """
+        
+        order = {
+            'hitpoints': 'HP', 
+            'attack': 'ATK', 
+            'defense': 'DEF', 
+            'agility': 'AGL', 
+            'luck': 'LCK'
+            }
+
+        print "Level %s %s\n" % (self.level, self.name)
+
+        for stat, name in order.iteritems():
+            print "%s: %s" % (name, getattr(self, stat))
+    
+
+    def punch(self, defender):
+
+        attack_roll = randint(0, self.luck) + self.attack
+        defend_roll = randint(0, defender.luck / 2) + defender.defense
+        
+        damage = attack_roll - defend_roll
+
+        if damage < 0: damage = 0
+
+        defender.hitpoints -= damage #apply damage to defender
+
+        print "\n%s hit %s for %s damage!" % (self.name, defender.name, damage)
+        
 
 def create_baddie(level):
+    """This creates a character object with 
+    semi-stats for the player to fight
 
-    baddie = {
-        "Name": "LVL. %s Goblin" % level,
-        "ATK": random.randint(0,2 + level),
-        "DEF": random.randint(0,2 + level),
-        "AGL": random.randint(0,2 + level),
-        "LCK": random.randint(0,2 + level),
-        "HP": 5
-        }
-    
+    """
+
+    name = "Goblin"
+    level = level
+    attack = randint(0,2 + level)
+    defense = randint(0,2 + level)
+    agility = randint(0,2 + level)
+    luck = randint(0,2 + level)
+    hitpoints = randint(3, 4 + level)
+
+    baddie = Character(name, level, attack, hitpoints, defense, agility, luck)
+
     return baddie
-
-
-def print_stats(char):
-
-    for stat, value in char.iteritems():
-        print "%s: %s" % (stat, value)
-
-    return None
-
-
-def attack(attacker, defender):
-
-    attack_roll = random.randint(0, attacker["LCK"]) + attacker["ATK"]
-    defend_roll = random.randint(0, defender["LCK"]) + defender["DEF"]
-    
-    damage = attack_roll - defend_roll
-
-    if damage < 0: damage = 0
-
-    print "%s hit %s for %s damage!" % (attacker["Name"], defender["Name"], damage)
-    
-    return damage
 
 
 def battle(player, baddy):
 
-    agl_check = baddy["AGL"] > player["AGL"]
+    agl_check = baddy.agility > player.agility
 
     if agl_check:
-        print "Oh no! the enemy strikes first!"
+        print "\nOh no! the enemy strikes first!"
 
     while True:
     
         if agl_check:
-            print_stats(baddy)
+            baddy.print_stats()
+
             print "\nIt's this guy's turn.\n"
             raw_input("Enter to continue.")
             
-            damage = attack(baddy, player)
-
-            player["HP"] -= damage
+            baddy.punch(player)
             
-            if player["HP"] <= 0: break
+            if player.hitpoints <= 0: break
             
             print
 
-            print_stats(player)
+            player.print_stats()
+
             print "\nIt's your turn.\n"
             raw_input("Enter to continue.")
 
-            damage = attack(player, baddy)
+            player.punch(baddy)
 
-            baddy["HP"] -= damage
-
-            if baddy["HP"] <= 0: break
+            if baddy.hitpoints <= 0: break
             
             print
 
         else:
-            print_stats(player)
+            player.print_stats()
+            
             print "\nIt's your turn.\n"
             raw_input("Enter to continue.")
             
-            damage = attack(player, baddy)
-
-            baddy["HP"] -= damage
+            player.punch(baddy)
             
-            if baddy["HP"] <= 0: break
+            if baddy.hitpoints <= 0: break
             
             print
 
-            print_stats(baddy)
+            baddy.print_stats()
+
             print "\nIt's this guys turn.\n"
             raw_input("Enter to continue.")
 
-            damage = attack(baddy, player)
+            baddy.punch(player)
 
-            player["HP"] -= damage
-
-            if player["HP"] <= 0: break
-            
+            if player.hitpoints <= 0: break
+                
             print
 
-    if player["HP"] <= 0: sys.exit("You died.")
+    if player.hitpoints <= 0: sys.exit("You died.")
 
     else:
-        player["Kills"] += 1
-        player["HP"] = player["Max HP"]
-
-        if player["Kills"] == player["LVL"]:
-            print "You leveled up!"
-            assign_points(player, player["LVL"])
-            player["LVL"] += 1
-            player["Kills"] = 0
-
-        return player
+        print "\nYou killed the %s!" % (baddy.name)
+        player.kills += 1
+        player.hitpoints = player.max_hitpoints #heal player after fight
+        
+        player.level_up() #check if player can level up
 
 
 def main():
@@ -194,34 +206,51 @@ def main():
     os.system('clear' if os.name == 'posix' else 'cls')
     
     name = raw_input("What's your name? ")
-    pl_char = create_pc(name)
+    player = Character(name, assign=8)
+    """
+    enemy = create_baddie(3)
 
-    pl_char = assign_points(pl_char, 8)
+    print player
 
-    print "*BOOM*"
+    print enemy
+    
+    print
+
+    player.print_stats()
+    
+    print
+
+    enemy.print_stats()
+
+    print
+
+    enemy.attack(player)
+    """
+    print "\n*BOOM*"
 
     time.sleep(2)
 
-    print "*BOOM BOOM*"
+    print "\n*BOOM BOOM*"
 
     time.sleep(2)
 
-    print "HEY! Get up! We're under attack!"
+    print "\nHEY! Get up! We're under attack!"
     print "Get your ass up, pick up a weapon, and defend the village!"
 
     time.sleep(1)
 
-    print "..."
+    print "\n..."
 
     time.sleep(1)
 
-    print "Welp, no weapons. Looks like our feline god named 'Lin' has forsaken you."
-    print "Now go fight."
+    print "\nWelp, no weapons."
+    print "Looks like our feline god named 'Lin' has forsaken you."
+    print "Now go fight.\n"
 
     while True:
 
-        enemy = create_baddie(random.randint(1, pl_char["LVL"] + 1))
-        pl_char = battle(pl_char, enemy)
+        enemy = create_baddie(randint(1, player.level + 1))
+        battle(player, enemy)
 
     return None
 
