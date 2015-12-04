@@ -1,189 +1,283 @@
 import os
 import time
-import random
 import sys
-
-def create_pc(name):
-
-    character = {
-        "Name": name,
-        "ATK": 1,
-        "DEF": 1,
-        "AGL": 1,
-        "LCK": 1,
-        "Max HP": 10,
-        "HP": 10,
-        "LVL": 1,
-        "Kills": 0
-        }
-
-    return character
+from random import *
 
 
-def assign_points(player, points):
+class Character(object):
+    """Should be able to use this class for both
+    enemies *and* the human player.
 
-    stats = ["ATK", "DEF", "AGL", "LCK"]
+    Example:
+        >>> derp = Character.random('goblin', level=5)
+        >>> derp = Character('human', attack=44, ...)
 
-    while points > 0:
-        print "You have %s points remaining" % points
-        print "Assign points by typing in the stat you want to boost.\n"
-        print "ATK: %s" % player["ATK"]
-        print "DEF: %s" % player["DEF"]
-        print "AGL: %s" % player["AGL"]
-        print "LCK: %s \n" % player["LCK"]
-        selection = raw_input("$")
+    """
 
-        if selection in stats:
-            player[selection] += 1
-            points -= 1
+    def __init__(self, name, attack=1, defense=1, agility=1,
+                 luck=1, hitpoints=10, level=0, kills=0):
 
-        else: print "\nTry Again.\n"
+        """
 
-    return player
+        Args:
+            name (str): --
 
+        """
 
-def create_baddie(level):
+        self.name = name
+        self.attack = attack
+        self.defense = defense
+        self.agility = agility
+        self.luck = luck
+        self.hitpoints = hitpoints
+        self.level = level
+        self.kills = kills
 
-    baddie = {
-        "Name": "LVL. %s Goblin" % level,
-        "ATK": random.randint(0,2 + level),
-        "DEF": random.randint(0,2 + level),
-        "AGL": random.randint(0,2 + level),
-        "LCK": random.randint(0,2 + level),
-        "HP": 5
-        }
+        self.max_hitpoints = hitpoints
+
+        self.stat_labels = {
+                            "ATK": "attack",
+                            "DEF": "defense",
+                            "AGL": "agility",
+                            "LCK": "luck"
+                           }
+
+    @classmethod
+    def from_assigned(cls, name, points_to_assign):
+        """Create a character object, by interactively
+        promting the user to distribute n points among
+        their stats.
+
+        Args:
+            name (str): The name of this character, e.g.,
+                "Cool Girl the Awesome."
+            points_to_assign (int): Number of points to
+                interactively distribute into stats.
+
+        Returns:
+            Character: Whose stats are created from
+                character.assign_points().
+
+        Notes:
+            Another good name would be "from_interactive."
+
+        """
+
+        character = cls(name)
+        character.assign_points(points_to_assign)
+
+        return character
+
+    @classmethod
+    def random(cls, name, level):
+        """Create an character instance of "name"
+        with randomly generated stats.
+
+        Returns:
+            Character: --
+
+        """
+
+        # generate some random stats
+        # use this class' init function
+        # to produce and return a character
+        level = level
+        attack = randint(0,2 + level)
+        defense = randint(0,2 + level)
+        agility = randint(0,2 + level)
+        luck = randint(0,2 + level)
+        hitpoints = randint(3, 4 + level)
+
+        character = cls(name, level, attack, hitpoints,
+                        defense, agility, luck)
+
+        return character
+
+    def assign_points(self, points):
+        """Namely for HumanPlayer to distribute
+        their stats into the hero.
+
+        Args:
+            points (int): Number of points to invest
+                in stats.
+
+        """
+
+        while points > 0:
+            # NOTE:
+            # use textwrap.dedent with a ''' string
+            # i personally like to use ''' for non-docstring multi
+            # line strings
+            print "\nYou have %s points remaining" % points
+            print "Assign points by typing in the stat you want to boost.\n"
+            print "ATK: %s" % self.attack
+            print "DEF: %s" % self.defense
+            print "AGL: %s" % self.agility
+            print "LCK: %s \n" % self.luck
+            selection = raw_input("$").upper()
+            
+            if selection in self.stat_labels:
+                # Increase the selected stat by one
+                setattr(self, self.stat_labels[selection], 
+                        getattr(self, self.stat_labels[selection]) + 1)
+                points -= 1
+
+            else:
+                print "\nTry Again.\n"
+
+    def level_up(self):
+        """Checks if player can level up.
+        
+        """
+
+        if self.kills >= self.level:
+            self.assign_points(self.level)
+            self.kills = 0
+            self.level += 1
+
+        else:
+            return None
+
+    def print_stats(self):
+        """Print the current stats of the player 
+        to the console.
+
+        """
+        
+        order = {
+            'hitpoints': 'HP', 
+            'attack': 'ATK', 
+            'defense': 'DEF', 
+            'agility': 'AGL', 
+            'luck': 'LCK'
+            }
+
+        print "Level %s %s\n" % (self.level, self.name)
+
+        for stat, name in order.iteritems():
+            print "%s: %s" % (name, getattr(self, stat))
     
-    return baddie
+    def punch(self, defender):
+        """Attack the defender!
 
+        This object will deal damage to the defender.
 
-def print_stats(char):
+        Explain stat damage here.
 
-    for stat, value in char.iteritems():
-        print "%s: %s" % (stat, value)
+        Args:
+            defender (Character): --
 
-    return None
+        """
 
+        attack_roll = randint(0, self.luck) + self.attack
+        defend_roll = randint(0, defender.luck / 2) + defender.defense
+        
+        damage = attack_roll - defend_roll
 
-def attack(attacker, defender):
+        if damage < 0:
+            damage = 0
 
-    attack_roll = random.randint(0, attacker["LCK"]) + attacker["ATK"]
-    defend_roll = random.randint(0, defender["LCK"]) + defender["DEF"]
-    
-    damage = attack_roll - defend_roll
+        defender.hitpoints -= damage #apply damage to defender
 
-    if damage < 0: damage = 0
-
-    print "%s hit %s for %s damage!" % (attacker["Name"], defender["Name"], damage)
-    
-    return damage
+        print "\n%s hit %s for %s damage!" % (self.name, defender.name, damage)
 
 
 def battle(player, baddy):
 
-    agl_check = baddy["AGL"] > player["AGL"]
+    agl_check = baddy.agility > player.agility
 
     if agl_check:
-        print "Oh no! the enemy strikes first!"
+        print "\nOh no! the enemy strikes first!"
 
     while True:
     
         if agl_check:
-            print_stats(baddy)
+            baddy.print_stats()
+
             print "\nIt's this guy's turn.\n"
             raw_input("Enter to continue.")
             
-            damage = attack(baddy, player)
-
-            player["HP"] -= damage
+            baddy.punch(player)
             
-            if player["HP"] <= 0: break
+            if player.hitpoints <= 0: break
             
             print
 
-            print_stats(player)
+            player.print_stats()
+
             print "\nIt's your turn.\n"
             raw_input("Enter to continue.")
 
-            damage = attack(player, baddy)
+            player.punch(baddy)
 
-            baddy["HP"] -= damage
-
-            if baddy["HP"] <= 0: break
+            if baddy.hitpoints <= 0: break
             
             print
 
         else:
-            print_stats(player)
+            player.print_stats()
+            
             print "\nIt's your turn.\n"
             raw_input("Enter to continue.")
             
-            damage = attack(player, baddy)
-
-            baddy["HP"] -= damage
+            player.punch(baddy)
             
-            if baddy["HP"] <= 0: break
+            if baddy.hitpoints <= 0: break
             
             print
 
-            print_stats(baddy)
+            baddy.print_stats()
+
             print "\nIt's this guys turn.\n"
             raw_input("Enter to continue.")
 
-            damage = attack(baddy, player)
+            baddy.punch(player)
 
-            player["HP"] -= damage
-
-            if player["HP"] <= 0: break
-            
+            if player.hitpoints <= 0: break
+                
             print
 
-    if player["HP"] <= 0: sys.exit("You died.")
+    if player.hitpoints <= 0: sys.exit("You died.")
 
     else:
-        player["Kills"] += 1
-        player["HP"] = player["Max HP"]
+        print "\nYou killed the %s!" % (baddy.name)
+        player.kills += 1
+        player.hitpoints = player.max_hitpoints #heal player after fight
+        
+        player.level_up() #check if player can level up
 
-        if player["Kills"] == player["LVL"]:
-            print "You leveled up!"
-            assign_points(player, player["LVL"])
-            player["LVL"] += 1
-            player["Kills"] = 0
-
-        return player
 
 def main():
-
+    # NOTE: this is a tenary
     os.system('clear' if os.name == 'posix' else 'cls')
     
     name = raw_input("What's your name? ")
-    pl_char = create_pc(name)
+    player = Character.from_assigned(name, points_to_assign=8)
 
-    pl_char = assign_points(pl_char, 8)
-
-    print "*BOOM*"
+    print "\n*BOOM*"
 
     time.sleep(2)
 
-    print "*BOOM BOOM*"
+    print "\n*BOOM BOOM*"
 
     time.sleep(2)
 
-    print "HEY! Get up! We're under attack!"
+    print "\nHEY! Get up! We're under attack!"
     print "Get your ass up, pick up a weapon, and defend the village!"
 
     time.sleep(1)
 
-    print "..."
+    print "\n..."
 
     time.sleep(1)
 
-    print "Welp, no weapons. Looks like our feline god named 'Lin' has forsaken you."
-    print "Now go fight."
+    print "\nWelp, no weapons."
+    print "Looks like our feline god named 'Lin' has forsaken you."
+    print "Now go fight.\n"
 
     while True:
-
-        enemy = create_baddie(random.randint(1, pl_char["LVL"] + 1))
-        pl_char = battle(pl_char, enemy)
+        enemy = Character.random('goblin', player.level + 1)
+        battle(player, enemy)
 
     return None
 
