@@ -1,7 +1,7 @@
 import os
 import time
 import sys
-from random import *
+from random import randint, choice
 
 
 class Character(object):
