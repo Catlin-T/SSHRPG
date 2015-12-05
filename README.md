@@ -1,3 +1,3 @@
-# Catlin's Assignments
+# SSHRPG rebirth
 
-This repo houses the programs and scripts that Catlin will write to further develop his skillz.
+This repo houses the framework for what will be a casual RPG that one can play in the background.

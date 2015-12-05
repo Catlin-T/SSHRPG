@@ -72,9 +72,17 @@ class Character(object):
     def random(cls, name, level):
         """Create an character instance of "name"
         with randomly generated stats.
+        
+        Args:
+            name (str): The name of this character, e.g.,
+                "Goblin."
+            level (int): The level of the character that is
+                being generated. This affects the number of
+                points that get randomly distributed through
+                out the character's stats.
 
         Returns:
-            Character: --
+            Character: Whose stats are generated randomly.
 
         """
 
@@ -85,11 +93,11 @@ class Character(object):
             level = 1
         
         # Generated characters get the same number of points as player
-        points = 4
+        points_to_assign = 4
         
         # Add additional points per level at the same rate as player
         for num in range(level):
-            points += level
+            points_to_assign += level
 
         # Temporary holder for character stat values
         stats = {
@@ -100,7 +108,7 @@ class Character(object):
                 }
 
         # Assign each point randomly
-        for point in range(points):
+        for point in range(points_to_assign):
             stats[choice(stats.keys())] += 1
 
         attack    = stats["attack"]
@@ -183,37 +191,125 @@ class Character(object):
 
         This object will deal damage to the defender.
 
-        Explain stat damage here.
+        Attributes Used:
+            defender.luck (int): This is halved and then used to
+                generate a defense bonus.
+            defender.defense (int): This defends against self.attack
+            defender.hitpoints (int): Once the damage is calculated,
+                this is what it gets subtracted from.
+            self.luck (int): Is used to generate an attack bonus
+            self.attack (int): Base value used for calculating damage.
 
         Args:
-            defender (Character): --
+            defender (Character): The character getting attacked.
 
         """
         
-        # Calculate defense first
-        defend_roll = randint(0, defender.luck / 2)  
-        defend_bonus = defend_roll + defender.defense
+        d20 = Die(20)
+
+        results = d20.attack_roll(self.luck, defender.luck)
         
-        # Calculate attack
-        attack_roll = randint(0, self.luck)
+        atk_bonus = results[0]
+        def_bonus = results[1]
+        critical  = results[2]
 
-        if attack_roll == self.luck: # chance for critical
-            print "CRITICAL HIT!"
-            attack_bonus = attack_roll + self.attack
-            defend_bonus /= 2 
+        atk_total = atk_bonus + self.attack
+        def_total = def_bonus + defender.defense
 
-        else:
-            attack_bonus = (attack_roll / 2) + self.attack
+        if critical:
+            def_total /= 2
+
+        damage = atk_total - def_total
+
+        if critical and damage < 1:
+            damage = 1
+
+        elif damage < 1:
+            damage = 0
         
-        damage = attack_bonus - defend_bonus 
+        defender.hitpoints -= damage
 
-        if damage <= 0:
+        #Print statements
+
+        if critical:
+            print "CRITICAL!"
+
+        if damage == 0:
             print "Missed!"
 
         else:
-            defender.hitpoints -= damage #apply damage to defender
+            print "%s hit %s for %s damage" % (self.name, defender.name, damage)
+        
 
-            print "\n%s hit %s for %s damage!" % (self.name, defender.name, damage)
+
+class Die(object):
+    """Die object that will be used to calculate and
+    execute probabilities.
+
+    Examples:
+        >>> d20 = Die(20)
+        >>> d6 = Die(6)
+
+    """
+
+    def __init__(self, sides):
+        """
+        Args:
+            sides (int): The number of possible sides.
+        
+        """
+
+        self.sides = sides
+
+    def roll(self):
+        """Rolls the die and returns the number it landed on.
+
+        Returns:
+            int: Between 1 and self.sides
+
+        """
+
+        return randint(1, self.sides)
+
+    def attack_roll(self, atk_luck, def_luck):
+        """Calculates the attack bonus and if it's a critical hit.
+
+        Args:
+            atk_luck (int): The attacker's luck value.
+            def_luck (int): The defender's luck value.
+
+        Returns:
+            total_results (tup): a tuple containing the following
+                results -- (atk_bonus, def_bonus, critical)
+            atk_bonus (int): The total attack bonus from the roll.
+            def_bonus (int): The total defense bonus from the roll.
+            critical (bool): Whether or not it's a critical hit.
+
+        """
+        
+        critical = False
+        critical_threshold = atk_luck - def_luck
+
+        if critical_threshold > 8: #crit chance cannot be greater than 40%
+            critical_threshold = 8
+
+        elif critical_threshold < 1: #crit chance cannot be less than 5%
+            critical_threshold = 1
+
+        critical_threshold = self.sides - critical_threshold 
+
+        atk_result = self.roll() #roll the die!
+        def_result = self.sides - atk_result #if atk rolls low, def high
+
+        if atk_result >= critical_threshold: #did we roll above crit threshold?
+            critical = True
+
+        atk_bonus = (atk_result * atk_luck) / self.sides
+        def_bonus = (def_result * def_luck) / self.sides
+
+        total_results = (atk_bonus, def_bonus, critical)
+
+        return total_results
 
 
 def battle(player, baddy):
