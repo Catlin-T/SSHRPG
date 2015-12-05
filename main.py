@@ -15,7 +15,7 @@ class Character(object):
     """
 
     def __init__(self, name, attack=1, defense=1, agility=1,
-                 luck=1, hitpoints=10, level=0, kills=0):
+                 luck=1, hitpoints=10, level=1, kills=0):
 
         """
 
@@ -81,15 +81,36 @@ class Character(object):
         # generate some random stats
         # use this class' init function
         # to produce and return a character
-        level = level
-        attack = randint(0,2 + level)
-        defense = randint(0,2 + level)
-        agility = randint(0,2 + level)
-        luck = randint(0,2 + level)
-        hitpoints = randint(3, 4 + level)
+        if level < 1:
+            level = 1
+        
+        # Generated characters get the same number of points as player
+        points = 4
+        
+        # Add additional points per level at the same rate as player
+        for num in range(level):
+            points += level
 
-        character = cls(name, level, attack, hitpoints,
-                        defense, agility, luck)
+        # Temporary holder for character stat values
+        stats = {
+                "attack": 0,
+                "defense": 0,
+                "agility": 0,
+                "luck": 0,
+                }
+
+        # Assign each point randomly
+        for point in range(points):
+            stats[choice(stats.keys())] += 1
+
+        attack    = stats["attack"]
+        defense   = stats["defense"]
+        agility   = stats["agility"]
+        luck      = stats["luck"]
+        hitpoints = randint(1, 10)
+
+        character = cls(name, attack, defense, agility,
+                        luck, hitpoints, level)
 
         return character
 
@@ -168,18 +189,31 @@ class Character(object):
             defender (Character): --
 
         """
-
-        attack_roll = randint(0, self.luck) + self.attack
-        defend_roll = randint(0, defender.luck / 2) + defender.defense
         
-        damage = attack_roll - defend_roll
+        # Calculate defense first
+        defend_roll = randint(0, defender.luck / 2)  
+        defend_bonus = defend_roll + defender.defense
+        
+        # Calculate attack
+        attack_roll = randint(0, self.luck)
 
-        if damage < 0:
-            damage = 0
+        if attack_roll == self.luck: # chance for critical
+            print "CRITICAL HIT!"
+            attack_bonus = attack_roll + self.attack
+            defend_bonus /= 2 
 
-        defender.hitpoints -= damage #apply damage to defender
+        else:
+            attack_bonus = (attack_roll / 2) + self.attack
+        
+        damage = attack_bonus - defend_bonus 
 
-        print "\n%s hit %s for %s damage!" % (self.name, defender.name, damage)
+        if damage <= 0:
+            print "Missed!"
+
+        else:
+            defender.hitpoints -= damage #apply damage to defender
+
+            print "\n%s hit %s for %s damage!" % (self.name, defender.name, damage)
 
 
 def battle(player, baddy):
@@ -276,7 +310,12 @@ def main():
     print "Now go fight.\n"
 
     while True:
-        enemy = Character.random('goblin', player.level + 1)
+        #min and max level that enemies can be
+        max_level = player.level + 1
+        min_level = player.level - 2
+        enemy_level = randint(min_level, max_level)
+
+        enemy = Character.random('goblin', enemy_level)
         battle(player, enemy)
 
     return None
