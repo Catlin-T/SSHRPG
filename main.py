@@ -15,12 +15,16 @@ class Character(object):
     """
 
     def __init__(self, name, attack=1, defense=1, agility=1,
-                 luck=1, hitpoints=10, level=1, kills=0):
+                 luck=1, hitpoints=10, level=1, experience=0):
 
         """
 
         Args:
             name (str): --
+            experience (int): If this is the human player,
+                this is the total experience gained. However,
+                if this is an enemy, this value represents
+                the experience gained by killing this enemy.
 
         """
 
@@ -31,8 +35,8 @@ class Character(object):
         self.luck = luck
         self.hitpoints = hitpoints
         self.level = level
-        self.kills = kills
-
+        self.experience = experience
+        
         self.max_hitpoints = hitpoints
 
         self.stat_labels = {
@@ -93,7 +97,7 @@ class Character(object):
             level = 1
         
         # Generated characters get the same number of points as player
-        points_to_assign = 4
+        points_to_assign = level
         
         # Add additional points per level at the same rate as player
         for num in range(level):
@@ -111,14 +115,20 @@ class Character(object):
         for point in range(points_to_assign):
             stats[choice(stats.keys())] += 1
 
+        # NOTE: some people (me) hate this
+        # kind of formatting because it's
+        # hard to maintain and oftenly
+        # inconsistent in style.
         attack    = stats["attack"]
         defense   = stats["defense"]
         agility   = stats["agility"]
         luck      = stats["luck"]
         hitpoints = randint(1, 10)
 
+        experience = level * randint(15, 45) #approximately 10 same level enemies to level up.
+
         character = cls(name, attack, defense, agility,
-                        luck, hitpoints, level)
+                        luck, hitpoints, level, experience)
 
         return character
 
@@ -154,18 +164,63 @@ class Character(object):
             else:
                 print "\nTry Again.\n"
 
-    def level_up(self):
-        """Checks if player can level up.
-        
+    def next_xp_goal(self):
+        """Return the total XP required to reach
+        the next level. NOT how much to the next
+        level, but the goal XP for the next level.
+
+        Level experience requirements are exponential.
+
+        Level    XP
+        1        -
+        2        300
+        3        450
+        4        600
+        5        750
+        6        900
+        7        1050
+        8        1200
+        9        1350
+        10       1500
+
+        And so on, there is no level limit, this is
+        an equation.
+
+        Notes:
+            base_xp is how much XP to the next level, every
+            level prior to the factor (bonus/increase).
+
+        Returns
+            int: The next level's XP goal.
+
         """
 
-        if self.kills >= self.level:
+        factor = 150
+
+        # this is a doozie because of the finitely
+        # abelian group/type math in Python 2 vs.
+        # Python 3
+        return int((self.level + 1) * factor)
+
+    def level_up(self):
+        """Level up if possible, return True if
+        leveled up, else False.
+        
+        Return:
+            bool: True if leveled up, False if not.
+
+        """
+
+        if self.experience >= self.next_xp_goal():
             self.assign_points(self.level)
-            self.kills = 0
             self.level += 1
+            self.experience = 0
+
+            return True
 
         else:
-            return None
+
+            return False
 
     def print_stats(self):
         """Print the current stats of the player 
@@ -173,6 +228,7 @@ class Character(object):
 
         """
         
+        # attribute name, print name
         order = {
             'hitpoints': 'HP', 
             'attack': 'ATK', 
@@ -182,9 +238,10 @@ class Character(object):
             }
 
         print "Level %s %s\n" % (self.level, self.name)
+        print("%s/%s XP" % (self.experience, self.next_xp_goal()))
 
-        for stat, name in order.iteritems():
-            print "%s: %s" % (name, getattr(self, stat))
+        for stat, print_name in order.iteritems():
+            print "%s: %s" % (print_name, getattr(self, stat))
     
     def punch(self, defender):
         """Attack the defender!
@@ -367,11 +424,11 @@ def battle(player, baddy):
                 
             print
 
-    if player.hitpoints <= 0: sys.exit("You died.")
-
+    if player.hitpoints <= 0:
+        sys.exit("You died.")
     else:
         print "\nYou killed the %s!" % (baddy.name)
-        player.kills += 1
+        player.experience += baddy.experience
         player.hitpoints = player.max_hitpoints #heal player after fight
         
         player.level_up() #check if player can level up
@@ -382,7 +439,7 @@ def main():
     os.system('clear' if os.name == 'posix' else 'cls')
     
     name = raw_input("What's your name? ")
-    player = Character.from_assigned(name, points_to_assign=8)
+    player = Character.from_assigned(name, points_to_assign=6)
 
     print "\n*BOOM*"
 
