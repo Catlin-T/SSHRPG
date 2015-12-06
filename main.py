@@ -36,7 +36,7 @@ class Character(object):
         self.hitpoints = hitpoints
         self.level = level
         self.experience = experience
-        
+
         self.max_hitpoints = hitpoints
 
         self.stat_labels = {
@@ -125,7 +125,7 @@ class Character(object):
         luck      = stats["luck"]
         hitpoints = randint(1, 10)
 
-        experience = level * randint(15, 45) #approximately 10 same level enemies to level up.
+        experience = level * randint(11, 16)
 
         character = cls(name, attack, defense, agility,
                         luck, hitpoints, level, experience)
@@ -195,12 +195,13 @@ class Character(object):
 
         """
 
-        factor = 150
+        base_xp = 100
+        factor = 1.5
 
         # this is a doozie because of the finitely
         # abelian group/type math in Python 2 vs.
         # Python 3
-        return int((self.level + 1) * factor)
+        return int(base_xp * (self.level + 1 ** factor))
 
     def level_up(self):
         """Level up if possible, return True if
@@ -214,7 +215,6 @@ class Character(object):
         if self.experience >= self.next_xp_goal():
             self.assign_points(self.level)
             self.level += 1
-            self.experience = 0
 
             return True
 
@@ -264,19 +264,16 @@ class Character(object):
         
         d20 = Die(20)
 
-        results = d20.attack_roll(self.luck, defender.luck)
-        
-        atk_bonus = results[0]
-        def_bonus = results[1]
-        critical  = results[2]
-
-        atk_total = atk_bonus + self.attack
-        def_total = def_bonus + defender.defense
+        bonuses = d20.attack_roll(self.luck, defender.luck)
+        attacker_bonus, defender_bonus, critical = bonuses
+ 
+        attacker_bonus += self.attack
+        defender_bonus += defender.defense
 
         if critical:
-            def_total /= 2
+            defender_bonus /= 2
 
-        damage = atk_total - def_total
+        damage = attacker_bonus - defender_bonus
 
         if critical and damage < 1:
             damage = 1
@@ -439,7 +436,7 @@ def main():
     os.system('clear' if os.name == 'posix' else 'cls')
     
     name = raw_input("What's your name? ")
-    player = Character.from_assigned(name, points_to_assign=6)
+    player = Character.from_assigned(name, points_to_assign=4)
 
     print "\n*BOOM*"
 
