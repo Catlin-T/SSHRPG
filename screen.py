@@ -1,17 +1,27 @@
 import textwrap
 import colorama
 import collections
+import os
 
 
 class Display(object):
     """This is the console/display.
+    
+    Responsibilities:
+    -Final drawing to screen
+    -Container for tiles
+    -Has current console resolution
+
+    Does Not (directly):
+    -take any input from player
+    -display text
 
     """
 
     def __init__(self, whitespace=" ", effect=None):
         # NOTE: need to auto get size and update dynamically
         # for scaling purposes
-        self.resolution = (60, 40)
+        self.resolution = self.get_console_resolution()
 
         self.whitespace = whitespace
 
@@ -23,6 +33,18 @@ class Display(object):
         # this is ran right before the screen is rendered, but
         # doesn't change lines
         self.effect = effect
+
+    def get_console_resolution(self):
+        """Returns the current console width and height
+        as an (x, y) tuple
+
+        NOTE: only compatible with unix-like OS's
+
+        """
+
+        rows, columns = os.popen('stty size', 'r').read().split()
+
+        return (int(columns), int(rows))
 
     def put_inline(self, string_to_insert, put_at_x, put_at_y):
         """Put the string_to_insert at position
@@ -36,7 +58,8 @@ class Display(object):
 
         selected_line = self._lines[put_at_y]
         selected_line_as_list = [character for character in selected_line]
-        ending_x_coordinate = min([self.resolution[0], len(string_to_insert) + put_at_x])
+        ending_x_coordinate = min([self.resolution[0], 
+                                  len(string_to_insert) + put_at_x])
         start_end_difference = ending_x_coordinate - put_at_x
 
         selected_line_as_list[put_at_x:ending_x_coordinate] = string_to_insert[:start_end_difference]
@@ -59,6 +82,15 @@ class Display(object):
             draw_these_lines = self.effect(self._lines)
 
         print("\n".join(draw_these_lines))
+
+
+class Tile(object):
+    """Tile objects will be the main objects that the users
+    interact with.
+
+    """
+    def __init__(self):
+        pass
 
 
 def rainbow_lines(lines):
