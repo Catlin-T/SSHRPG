@@ -9,25 +9,25 @@ class Display(object):
     """This is the console/display.
     
     Responsibilities:
-    -Final drawing to screen
-    -Container for tiles
-    -Has current console resolution
+
+      * Final drawing to screen
+      * Container for tiles
+      * Has current console resolution
 
     Does Not (directly):
-    -take any input from player
-    -display text
-    -apply effects
+    
+      * take any input from player
+      * display text
+      * apply effects
 
     """
 
-    def __init__(self, whitespace=" ", effect=None):
-
-        self.resolution = self.get_console_resolution()
-
+    def __init__(self, whitespace=" ", resolution=None):
+        self.resolution = resolution or self.get_console_resolution()
         self.whitespace = whitespace
 
         # make a blank string based off resolution
-        blank_line = (whitespace * self.resolution[0])  # x
+        blank_line = (whitespace * self.resolution[0])
         self._lines = [blank_line for i in xrange(self.resolution[1])]
         
         self.tiles = {}
@@ -36,7 +36,8 @@ class Display(object):
         """Returns the current console width and height
         as an (x, y) tuple
 
-        NOTE: only compatible with unix-like OS's
+        Note:
+            Only works on Unix-like systems
 
         """
 
@@ -51,6 +52,9 @@ class Display(object):
         If you draw something and its tail goes
         over the edge of the display, it is simply
         cut off/truncated.
+
+        Args:
+            --
 
         """
 
@@ -68,6 +72,9 @@ class Display(object):
         """Puts a multiline string or list of strings into the display
         or tile
 
+        Args:
+            --
+
         """
 
         try:
@@ -82,23 +89,18 @@ class Display(object):
     def draw(self):
         """Draw the state!"""
 
+        # for handling resoultion changes, just change how you
+        # draw the tiles!
         for tile in self.tiles.values():
             self.put_multiline(tile._lines, tile.put_tile_at_xy[0],
                                tile.put_tile_at_xy[1])
 
         draw_these_lines = self._lines
 
-        #if self.effect:
-        #    draw_these_lines = self.effect(self._lines)
-
         print("\n".join(draw_these_lines))
 
-    def create_tile(self, label, width_percentage, height_percentage,
-                    x_offset, y_offset):
-        """Create a tile and add it to the tiles dict."""
-
-        self.tiles[label] = Tile(width_percentage, height_percentage,
-                                 x_offset, y_offset)
+    def add_tile(self, tile_to_add):
+        self.tiles[tile_to_add.name] = tile_to_add
 
 
 class Tile(Display):
@@ -106,48 +108,43 @@ class Tile(Display):
     interact with.
 
     """
-    def __init__(self, width_percentage, height_percentage, 
+
+    def __init__(self, name, width_percentage, height_percentage, 
                  x_offset_percentage, y_offset_percentage, whitespace=' '):
+
         """
 
             Args:
+                name (str): This string is used as an index
+                    for tiles in `Display`.
                 width_percentage (float): The amount of the total display that
                                           this tile will take up horozontally.
                                           Arg must be between 0 and 1.
-
                 height_percentage (float): The amount of the total display that
                                            this tile will take up vertically.
                                            Arg must be between 0 and 1.
-
                 x_offset_percentage (float): --
-
                 y_offset_percentage (float): --
-
                 whitespace (char): The character that makes up the background
                                    of the tile
 
         """
 
+        # First, use the parent class' __init__ (Display)
+        resolution = self.get_tile_resolution(width_percentage,
+                                              height_percentage)
+        super(Tile, self).__init__(whitespace=whitespace,
+                                   resolution=resolution)
+
+        self.name = name
         self.width_percentage = width_percentage
         self.height_percentage = height_percentage
         self.x_offset_percentage = x_offset_percentage
         self.y_offset_percentage = y_offset_percentage
-        self.whitespace = whitespace
 
         self.check_offset()
 
-        self.resolution = self.get_tile_resolution()
-
         self.put_tile_at_xy = self.get_xy_offset()
-
-        # make a blank string based off resolution
-        blank_line = (whitespace * self.resolution[0])  # x
-        self._lines = [blank_line for i in xrange(self.resolution[1])]
-        
-        # effect
-        # this is ran right before the screen is rendered, but
-        # doesn't change lines
-        #self.effect = effect
 
     def check_offset(self):
         """Checks that the X and Y offsets don't push the tile off 
@@ -172,16 +169,23 @@ class Tile(Display):
 
         return None
 
-    def get_tile_resolution(self):
+    def get_tile_resolution(self, width_percentage=None,
+                            height_percentage=None):
+
         """Returns the resolution of the tile compared to the display
+
+        Note:
+            What do if modulo not zero? What do? Omg honk
 
         """
         
         console_resolution = self.get_console_resolution()
 
-        width = int(console_resolution[0] * self.width_percentage)
-        height = int(console_resolution[1] * self.height_percentage)
-
+        width = int((console_resolution[0]
+                     * width_percentage or self.width_percentage))
+        height = int((console_resolution[1]
+                      * height_percentage or self.height_percentage))
+        
         return (width, height)
 
     def get_xy_offset(self):
@@ -233,9 +237,11 @@ def rainbow_lines(lines):
 
 test = Display('.')
 
-test.create_tile("tile1", 0.5, 0.25, 0.2, 0.3)
+tile1 = Tile("tile1", 0.5, 0.5, 0, 0, whitespace="#")
+test.add_tile(tile1)
 
-test.create_tile("tile2", 0.2, 0.2, 0.7, 0.7)
+tile2 = Tile("tile2", 1, 0.5, 0, 1, whitespace="+")
+test.add_tile(tile2)
 
 test.tiles["tile2"].put_inline("FUCK YES I DID IT", 3, 4)
 
@@ -244,14 +250,4 @@ test.tiles["tile1"].put_multiline("""Tile
 
     one
             bitch-face!""", 10, 5)
-#test.put_inline("butt ass mode mother fucker bitch tits", 30, 10)
-#test.put_multiline("""Haha
-#Isn't this
-#
-#     really
-#
-#           fucking
-#                  coool!?!?""", 10, 20)
-#
-
 test.draw()
